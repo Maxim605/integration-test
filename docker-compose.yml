@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: lks-test
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./test/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+
+  app:
+    build: .
+    depends_on:
+      - db
+    environment:
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: admin
+      DATABASE_NAME: lks-test
+      MOCK_BASE_URL: http://host.docker.internal:3001
+    ports:
+      - "3000:3000" 
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: npm run test
