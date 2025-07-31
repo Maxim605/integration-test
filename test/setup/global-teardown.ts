@@ -1,13 +1,13 @@
-import { TestContainerSetup } from './test-container.setup';
+import { TestEnvironmentManager } from './environment-manager';
 
 export default async function globalTeardown(): Promise<void> {
-  console.log('Глобальный teardown: остановка тестовой базы данных...');
+  console.log('Глобальный teardown: очистка тестового окружения...');
   try {
-    await TestContainerSetup.stopDatabase();
+    const manager = TestEnvironmentManager.getInstance();
+    await manager.cleanup();
     console.log('Глобальный teardown завершён');
   } catch (error) {
     console.error('Ошибка глобального teardown:', error);
     throw error;
   }
-  setTimeout(() => process.exit(0), 100);
 } 
