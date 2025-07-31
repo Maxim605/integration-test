@@ -36,5 +36,10 @@ module.exports = {
       testMatch: ["<rootDir>/test/e2e/**/*.spec.ts"],
       transform: { '^.+\\.(ts|tsx)$': 'ts-jest' },
     },
+    {
+      displayName: "examples",
+      testMatch: ["<rootDir>/test/examples/**/*.spec.ts"],
+      transform: { '^.+\\.(ts|tsx)$': 'ts-jest' },
+    },
   ],
 };

@@ -1,7 +1,15 @@
 import { Pool, PoolClient, PoolConfig } from 'pg';
 
 export function createTestPool(config: PoolConfig): Pool {
-  const pool = new Pool(config);
+  const safeConfig: PoolConfig = {
+    ...config,
+    host: config.host !== undefined ? String(config.host) : undefined,
+    port: config.port !== undefined ? Number(config.port) : undefined,
+    user: config.user !== undefined ? String(config.user) : undefined,
+    password: config.password !== undefined ? String(config.password) : undefined,
+    database: config.database !== undefined ? String(config.database) : undefined,
+  };
+  const pool = new Pool(safeConfig);
 
   pool.on('error', (err: any) => {
     if (err && err.code === '57P01') return;
