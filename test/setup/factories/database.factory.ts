@@ -173,6 +173,10 @@ export class DatabaseServiceInstance implements ServiceInstance {
       if (col.autoIncrement) {
         columnDef += ' AUTO_INCREMENT';
       }
+
+      if (col.unique) {
+        columnDef += ' UNIQUE';
+      }
       
       if (col.defaultValue !== undefined) {
         columnDef += ` DEFAULT ${col.defaultValue}`;

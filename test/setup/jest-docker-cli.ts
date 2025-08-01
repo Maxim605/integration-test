@@ -22,8 +22,7 @@ async function main() {
                 user: 'postgres',
                 password: 'admin',
                 database: 'lks-test',
-                initScripts: ['test/init-db.sql'],
-                // Дополнительные SQL файлы из переменной окружения
+                // initScripts: ['test/init-db.sql'],
                 ...(process.env.EXTRA_SQL_FILES && {
                   initScripts: [
                     ...process.env.EXTRA_SQL_FILES.split(',').map(f => f.trim()).filter(Boolean)

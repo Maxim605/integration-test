@@ -30,6 +30,7 @@ export interface TableConfig {
 export interface ColumnConfig {
   name: string;
   type: string;
+  unique?: boolean;
   nullable?: boolean;
   primaryKey?: boolean;
   autoIncrement?: boolean;
