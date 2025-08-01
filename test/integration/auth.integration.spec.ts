@@ -4,30 +4,105 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { Pool } from 'pg';
 import { createTestPool } from '../setup/db-pool';
+import { TestEnvironmentManager } from '../setup/environment-manager';
+import { TestEnvironmentConfig } from '../setup/types';
+
+const testConfig: TestEnvironmentConfig = {
+  services: [
+    {
+      name: 'test-db',
+      type: 'database',
+      config: {
+        type: 'postgres',
+        version: '15-alpine',
+        user: 'postgres',
+        password: 'admin',
+        database: 'test-db',
+        tables: [
+          {
+            name: 'users',
+            columns: [
+              { name: 'id', type: 'SERIAL', primaryKey: true },
+              { name: 'login', type: 'VARCHAR(255)', nullable: false, unique: true },
+              { name: 'password', type: 'VARCHAR(255)', nullable: false },
+              { name: 'created_at', type: 'TIMESTAMP', defaultValue: 'CURRENT_TIMESTAMP' }
+            ],
+            indexes: [
+              { name: 'idx_login', columns: ['login'], unique: true }
+            ]
+          }
+        ],
+        data: {
+          users: [
+            { login: '122', password: '122' }
+          ]
+        }
+      }
+    },
+    {
+      name: 'mock-api',
+      type: 'http-mock',
+      config: {
+        port: 3001,
+        routes: [
+          {
+            method: 'POST',
+            path: '/auth/login',
+            response: {
+              status: 200,
+              body: {
+                status: 'ok'
+              }
+            }
+          }
+        ],
+        middleware: [
+          { type: 'cors' },
+          { type: 'logging' }
+        ]
+      }
+    }
+  ],
+  globalConfig: {
+    TEST_DB_HOST: '${test-db.host}',
+    TEST_DB_PORT: '${test-db.port}',
+    TEST_DB_USER: '${test-db.user}',
+    TEST_DB_PASSWORD: '${test-db.password}',
+    TEST_DB_NAME: '${test-db.database}',
+    TEST_API_URL: 'http://localhost:3000',
+    MOCK_BASE_URL: 'http://localhost:3001',
+    DATABASE_HOST: '${test-db.host}',
+    DATABASE_PORT: '${test-db.port}',
+    DATABASE_USER: '${test-db.user}',
+    DATABASE_PASSWORD: '${test-db.password}',
+    DATABASE_NAME: '${test-db.database}',
+  }
+};
+
 
 describe('Интеграционные тесты аутентификации', () => {
   let app: INestApplication;
   let dbPool: Pool;
+  let manager: TestEnvironmentManager;
 
   beforeAll(async () => {
+    manager = TestEnvironmentManager.getInstance();
+    await manager.initializeEnvironment(testConfig);
+
+    process.env.DATABASE_HOST = manager.getServiceConnectionInfo('test-db').host;
+    process.env.DATABASE_PORT = manager.getServiceConnectionInfo('test-db').port.toString();
+    process.env.DATABASE_USER = manager.getServiceConnectionInfo('test-db').user;
+    process.env.DATABASE_PASSWORD = manager.getServiceConnectionInfo('test-db').password;
+    process.env.DATABASE_NAME = manager.getServiceConnectionInfo('test-db').database;
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());
-    await app.init();
-
-   db = 
-   
-
-    dbPool = createTestPool({
-      host: process.env.DATABASE_HOST || 'localhost',
-      port: Number(process.env.DATABASE_PORT) || 5432,
-      user: process.env.DATABASE_USER || 'postgres',
-      password: process.env.DATABASE_PASSWORD || 'admin',
-      database: process.env.DATABASE_NAME || 'lks-test',
-    });
+    await app.init();   
+    dbPool = createTestPool(manager.getServiceConnectionInfo('test-db'));
   });
 
   afterAll(async () => {
@@ -57,14 +132,14 @@ describe('Интеграционные тесты аутентификации',
     });
 
     it('должен корректно обрабатывать дублирующийся логин', async () => {
-      const loginData = { login: 'duplicate', password: '42' };
+      const loginData = { login: 'testuser', password: '42' };
       await request(app.getHttpServer())
         .post('/login')
         .send(loginData)
         .expect(201);
       const response = await request(app.getHttpServer())
         .post('/login')
-        .send({ ...loginData, password: '52' })
+        .send({ ...loginData, password: '42' })
         .expect(201);
       expect(response.body).toEqual({ status: 'ok' });
       const dbResult = await dbPool.query(
@@ -72,7 +147,7 @@ describe('Интеграционные тесты аутентификации',
         [loginData.login]
       );
       expect(dbResult.rows).toHaveLength(1);
-      expect(dbResult.rows[0].password).toBe('52');
+      expect(dbResult.rows[0].password).toBe('42');
     });
 
     it('должен валидировать обязательные поля', async () => {
@@ -116,7 +191,7 @@ describe('Интеграционные тесты аутентификации',
     });
 
     it('должен обрабатывать одновременное создание пользователей', async () => {
-      const loginData = { login: 'test_user', password: '42' };
+      const loginData = { login: 'testuser', password: '42' };
       const promises = Array(5).fill(null).map(() =>
         request(app.getHttpServer())
           .post('/login')

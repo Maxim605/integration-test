@@ -33,7 +33,7 @@ export class HttpMockServiceInstance implements ServiceInstance {
     this.setupRoutes();
     console.log(`[${this.name}] Routes configured`);
     
-    const port = await this.findAvailablePort(this.config.port || 3000);
+    const port = await this.findAvailablePort(this.config.port || 3001);
     console.log(`[${this.name}] Found free port: ${port}`);
     
     this.server = this.app!.listen(port, () => {
