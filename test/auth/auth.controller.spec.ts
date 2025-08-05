@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
-import request from 'supertest';
-import { AppModule } from '../../src/app.module';
+import { Test, TestingModule } from "@nestjs/testing";
+import { INestApplication, ValidationPipe } from "@nestjs/common";
+import request from "supertest";
+import { AppModule } from "../../src/app.module";
 
-describe('Тесты контроллера аутентификации', () => {
+describe("Тесты контроллера аутентификации", () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -19,19 +19,19 @@ describe('Тесты контроллера аутентификации', () =>
     await app.close();
   });
 
-  it('должен возвращать статус ok при корректных данных', async () => {
+  it("должен возвращать статус ok при корректных данных", async () => {
     const response = await request(app.getHttpServer())
-      .post('/login')
-      .send({ login: 'test', password: '42' })
+      .post("/login")
+      .send({ login: "test", password: "42" })
       .expect(201);
-    expect(response.body).toEqual({ status: 'ok' });
+    expect(response.body).toEqual({ status: "ok" });
   });
 
-  it('должен возвращать ошибку при некорректных данных', async () => {
+  it("должен возвращать ошибку при некорректных данных", async () => {
     const response = await request(app.getHttpServer())
-      .post('/login')
-      .send({ login: '', password: '' })
+      .post("/login")
+      .send({ login: "", password: "" })
       .expect(400);
     expect(response.body.message).toBeDefined();
   });
-}); 
+});

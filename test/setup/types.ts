@@ -1,6 +1,6 @@
 export interface ServiceConfig {
   name: string;
-  type: 'database' | 'http-mock' | 'ldap';
+  type: "database" | "http-mock" | "ldap";
   config: any;
 }
 
@@ -10,7 +10,7 @@ export interface TestEnvironmentConfig {
 }
 
 export interface DatabaseConfig {
-  type: 'postgres' | 'mysql'| 'database';
+  type: "postgres" | "mysql" | "database";
   version?: string;
   user?: string;
   password?: string;
@@ -45,7 +45,7 @@ export interface IndexConfig {
 
 export interface ConstraintConfig {
   name: string;
-  type: 'foreign_key' | 'unique' | 'check';
+  type: "foreign_key" | "unique" | "check";
   columns: string[];
   references?: {
     table: string;
@@ -56,12 +56,14 @@ export interface ConstraintConfig {
 
 export interface HttpMockConfig {
   port?: number;
+  strictPort?: boolean; // Если true, то порт не будет переназначаться на свободный
+  portRange?: { min: number; max: number }; // Диапазон портов для поиска
   routes: HttpRouteConfig[];
   middleware?: HttpMiddlewareConfig[];
 }
 
 export interface HttpRouteConfig {
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
   path: string;
   response: HttpResponseConfig;
   delay?: number;
@@ -76,7 +78,7 @@ export interface HttpResponseConfig {
 }
 
 export interface HttpMiddlewareConfig {
-  type: 'cors' | 'auth' | 'logging' | 'custom';
+  type: "cors" | "auth" | "logging" | "custom";
   config?: any;
 }
 
@@ -117,4 +119,4 @@ export interface ServiceInstance {
 export interface ServiceFactory {
   createService(config: any): Promise<ServiceInstance>;
   supports(type: string): boolean;
-} 
+}

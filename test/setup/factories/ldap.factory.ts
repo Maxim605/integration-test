@@ -1,6 +1,12 @@
-import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
-import { ServiceFactory, ServiceInstance, LdapConfig, LdapUserConfig, LdapGroupConfig } from '../types';
-import * as ldap from 'ldapjs';
+import { GenericContainer, StartedTestContainer, Wait } from "testcontainers";
+import {
+  ServiceFactory,
+  ServiceInstance,
+  LdapConfig,
+  LdapUserConfig,
+  LdapGroupConfig,
+} from "../types";
+import * as ldap from "ldapjs";
 
 export class LdapServiceInstance implements ServiceInstance {
   private container: StartedTestContainer | null = null;
@@ -10,7 +16,7 @@ export class LdapServiceInstance implements ServiceInstance {
   constructor(
     public name: string,
     public type: string,
-    public config: LdapConfig
+    public config: LdapConfig,
   ) {}
 
   async start(): Promise<void> {
@@ -24,7 +30,8 @@ export class LdapServiceInstance implements ServiceInstance {
     });
 
     this.connectionInfo = {
-      host: 'localhost',
+      name: this.name,
+      host: "localhost",
       port,
       baseDN: this.config.baseDN,
       url: `ldap://localhost:${port}`,
@@ -49,31 +56,36 @@ export class LdapServiceInstance implements ServiceInstance {
     if (!this.server) return;
 
     const baseDN = this.config.baseDN;
-    
+
+    if (!baseDN) {
+      console.error(`[${this.name}] baseDN is undefined!`);
+      return;
+    }
+
     try {
       this.server.add(baseDN, {
-        objectClass: ['top', 'organization'],
-        o: 'Test Organization',
-        name: 'Test Organization',
-        cn: 'Test Organization',
+        objectClass: ["top", "organization"],
+        o: "Test Organization",
+        name: "Test Organization",
+        cn: "Test Organization",
         dn: baseDN,
       });
 
       const usersDN = `ou=users,${baseDN}`;
       this.server.add(usersDN, {
-        objectClass: ['top', 'organizationalUnit'],
-        ou: 'users',
-        name: 'users',
-        cn: 'users',
+        objectClass: ["top", "organizationalUnit"],
+        ou: "users",
+        name: "users",
+        cn: "users",
         dn: usersDN,
       });
 
       const groupsDN = `ou=groups,${baseDN}`;
       this.server.add(groupsDN, {
-        objectClass: ['top', 'organizationalUnit'],
-        ou: 'groups',
-        name: 'groups',
-        cn: 'groups',
+        objectClass: ["top", "organizationalUnit"],
+        ou: "groups",
+        name: "groups",
+        cn: "groups",
         dn: groupsDN,
       });
     } catch (error) {
@@ -94,11 +106,13 @@ export class LdapServiceInstance implements ServiceInstance {
 
     try {
       const userDN = userConfig.dn;
+      const nameValue =
+        userConfig.attributes?.cn || userConfig.attributes?.uid || "Unknown";
       const attributes: any = {
-        objectClass: ['top', 'person', 'organizationalPerson', 'inetOrgPerson'],
-        cn: userConfig.attributes.cn || userConfig.attributes.uid || 'Unknown',
-        sn: userConfig.attributes.sn || 'Unknown',
-        name: userConfig.attributes.cn || userConfig.attributes.uid || 'Unknown',
+        objectClass: ["top", "person", "organizationalPerson", "inetOrgPerson"],
+        cn: userConfig.attributes.cn || userConfig.attributes.uid || "Unknown",
+        sn: userConfig.attributes.sn || "Unknown",
+        name: nameValue,
         dn: userDN,
         ...userConfig.attributes,
       };
@@ -107,8 +121,11 @@ export class LdapServiceInstance implements ServiceInstance {
         attributes.userPassword = userConfig.password;
       }
 
+      if (!attributes.name) {
+        attributes.name = "Unknown";
+      }
+
       this.server.add(userDN, attributes);
-      console.log(`User added: ${userDN}`);
     } catch (error) {
       console.error(`Error adding user ${userConfig.dn}: ${error}`);
     }
@@ -127,18 +144,19 @@ export class LdapServiceInstance implements ServiceInstance {
 
     try {
       const groupDN = groupConfig.dn;
-      const cn = groupConfig.dn.split(',')[0].split('=')[1];
+      const cn = groupConfig.dn.split(",")[0].split("=")[1] || "Unknown";
       const attributes = {
-        objectClass: ['top', 'groupOfNames'],
+        objectClass: ["top", "groupOfNames"],
         cn: cn,
-        name: cn,
+        name: cn || "Unknown",
         dn: groupDN,
         member: groupConfig.members,
         ...groupConfig.attributes,
       };
-
+      if (!attributes.name) {
+        attributes.name = "Unknown";
+      }
       this.server.add(groupDN, attributes);
-      console.log(`Group added: ${groupDN}`);
     } catch (error) {
       console.error(`Error adding group ${groupConfig.dn}: ${error}`);
     }
@@ -160,14 +178,10 @@ export class LdapServiceInstance implements ServiceInstance {
 
 export class LdapFactory implements ServiceFactory {
   async createService(config: any): Promise<ServiceInstance> {
-    return new LdapServiceInstance(
-      config.name,
-      'ldap',
-      config
-    );
+    return new LdapServiceInstance(config.name, "ldap", config.config);
   }
 
   supports(type: string): boolean {
-    return type === 'ldap';
+    return type === "ldap";
   }
-} 
+}

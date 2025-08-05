@@ -1,6 +1,11 @@
-import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
-import { ServiceFactory, ServiceInstance, DatabaseConfig, TableConfig } from '../types';
-import { createTestPool } from '../db-pool';
+import { GenericContainer, StartedTestContainer, Wait } from "testcontainers";
+import {
+  ServiceFactory,
+  ServiceInstance,
+  DatabaseConfig,
+  TableConfig,
+} from "../types";
+import { createTestPool } from "../db-pool";
 
 export class DatabaseServiceInstance implements ServiceInstance {
   private container: StartedTestContainer | null = null;
@@ -9,7 +14,7 @@ export class DatabaseServiceInstance implements ServiceInstance {
   constructor(
     public name: string,
     public type: string,
-    public config: DatabaseConfig
+    public config: DatabaseConfig,
   ) {}
 
   async start(): Promise<void> {
@@ -20,8 +25,9 @@ export class DatabaseServiceInstance implements ServiceInstance {
       .withEnvironment(env)
       .withExposedPorts(5432)
       .withWaitStrategy(
-        Wait.forLogMessage('database system is ready to accept connections')
-          .withStartupTimeout(60000)
+        Wait.forLogMessage(
+          "database system is ready to accept connections",
+        ).withStartupTimeout(60000),
       )
       .start();
 
@@ -31,9 +37,9 @@ export class DatabaseServiceInstance implements ServiceInstance {
     this.connectionInfo = {
       host: String(host),
       port: String(port),
-      user: String(this.config.user || 'postgres'),
-      password: String(this.config.password || 'admin'),
-      database: String(this.config.database || 'test-db'),
+      user: String(this.config.user || "postgres"),
+      password: String(this.config.password || "admin"),
+      database: String(this.config.database || "test-db"),
     };
 
     console.log(`db ${this.name} started on ${host}:${port}`);
@@ -52,40 +58,42 @@ export class DatabaseServiceInstance implements ServiceInstance {
   }
 
   private getImageName(): string {
-    const type = this.config.type || 'postgres';
-    const version = this.config.version || '15-alpine';
-    
+    const type = this.config.type || "postgres";
+    const version = this.config.version || "15-alpine";
+
     const imageMap: Record<string, string> = {
-      'postgres': 'postgres',
-      'mysql': 'mysql',
-      'database': 'postgres' 
+      postgres: "postgres",
+      mysql: "mysql",
+      database: "postgres",
     };
-    
-    const imageName = imageMap[type] || 'postgres';
+
+    const imageName = imageMap[type] || "postgres";
     return `${imageName}:${version}`;
   }
 
   private getEnvironmentVariables(): Record<string, string> {
     const env: Record<string, string> = {};
-    
-    const dbType = (this.config.type === 'database' ? 'postgres' : this.config.type) as 'postgres' | 'mysql';
-    
+
+    const dbType = (
+      this.config.type === "database" ? "postgres" : this.config.type
+    ) as "postgres" | "mysql";
+
     switch (dbType) {
-      case 'postgres':
-        env.POSTGRES_USER = this.config.user || 'postgres';
-        env.POSTGRES_PASSWORD = this.config.password || 'admin';
-        env.POSTGRES_DB = this.config.database || 'test-db';
+      case "postgres":
+        env.POSTGRES_USER = this.config.user || "postgres";
+        env.POSTGRES_PASSWORD = this.config.password || "admin";
+        env.POSTGRES_DB = this.config.database || "test-db";
         break;
-      case 'mysql':
-        env.MYSQL_ROOT_PASSWORD = this.config.password || 'admin';
-        env.MYSQL_DATABASE = this.config.database || 'test-db';
-        env.MYSQL_USER = this.config.user || 'test';
-        env.MYSQL_PASSWORD = this.config.password || 'test';
+      case "mysql":
+        env.MYSQL_ROOT_PASSWORD = this.config.password || "admin";
+        env.MYSQL_DATABASE = this.config.database || "test-db";
+        env.MYSQL_USER = this.config.user || "test";
+        env.MYSQL_PASSWORD = this.config.password || "test";
         break;
       default:
-        env.POSTGRES_USER = this.config.user || 'postgres';
-        env.POSTGRES_PASSWORD = this.config.password || 'admin';
-        env.POSTGRES_DB = this.config.database || 'test-db';
+        env.POSTGRES_USER = this.config.user || "postgres";
+        env.POSTGRES_PASSWORD = this.config.password || "admin";
+        env.POSTGRES_DB = this.config.database || "test-db";
         break;
     }
 
@@ -94,11 +102,9 @@ export class DatabaseServiceInstance implements ServiceInstance {
 
   private async initializeDatabase(): Promise<void> {
     if (!this.connectionInfo) {
-      throw new Error('Database not started');
+      throw new Error("Database not started");
     }
-
-    console.log(`Initializing database ${this.name}...`);
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
     const pool = createTestPool({
       ...this.connectionInfo,
@@ -108,29 +114,23 @@ export class DatabaseServiceInstance implements ServiceInstance {
     });
 
     try {
-      await pool.query('SELECT 1');
-      console.log(`Connection to database ${this.name} established`);
+      await pool.query("SELECT 1");
 
       if (this.config.initScripts) {
         for (const script of this.config.initScripts) {
-          const fs = require('fs');
-          const path = require('path');
+          const fs = require("fs");
+          const path = require("path");
           const resolvedPath = path.resolve(process.cwd(), script);
-          const sql = fs.readFileSync(resolvedPath, 'utf8');
+          const sql = fs.readFileSync(resolvedPath, "utf8");
           await pool.query(sql);
-          console.log(`Script executed: ${script}`);
         }
       }
-      const allConf = this.config.initScripts
-      console.log('all config ', {allConf})
 
       if (this.config.tables) {
-        console.log('createTables')
         await this.createTables(pool);
       }
 
       if (this.config.data) {
-        console.log('insertData')
         await this.insertData(pool);
       }
 
@@ -147,7 +147,6 @@ export class DatabaseServiceInstance implements ServiceInstance {
     for (const table of this.config.tables!) {
       const createTableSQL = this.generateCreateTableSQL(table);
       await pool.query(createTableSQL);
-      console.log(`Table created: ${table.name}`);
 
       if (table.indexes) {
         for (const index of table.indexes) {
@@ -159,38 +158,51 @@ export class DatabaseServiceInstance implements ServiceInstance {
   }
 
   private generateCreateTableSQL(table: TableConfig): string {
-    const columns = table.columns.map(col => {
-      let columnDef = `${col.name} ${col.type}`;
-      
-      if (!col.nullable) {
-        columnDef += ' NOT NULL';
-      }
-      
-      if (col.primaryKey) {
-        columnDef += ' PRIMARY KEY';
-      }
-      
-      if (col.autoIncrement) {
-        columnDef += ' AUTO_INCREMENT';
-      }
+    const columns = table.columns
+      .map((col) => {
+        let columnDef = `${col.name} ${col.type}`;
 
-      if (col.unique) {
-        columnDef += ' UNIQUE';
-      }
-      
-      if (col.defaultValue !== undefined) {
-        columnDef += ` DEFAULT ${col.defaultValue}`;
-      }
-      
-      return columnDef;
-    }).join(', ');
+        if (!col.nullable) {
+          columnDef += " NOT NULL";
+        }
+
+        if (col.primaryKey) {
+          columnDef += " PRIMARY KEY";
+        }
+
+        if (col.autoIncrement) {
+          if (col.type.toUpperCase().includes("SERIAL")) {
+            columnDef = `${col.name} ${col.type}`;
+          } else {
+            columnDef = `${col.name} SERIAL`;
+          }
+        } else {
+          if (!col.nullable) {
+            columnDef += " NOT NULL";
+          }
+
+          if (col.primaryKey) {
+            columnDef += " PRIMARY KEY";
+          }
+
+        if (col.unique) {
+          columnDef += " UNIQUE";
+        }
+
+        if (col.defaultValue !== undefined) {
+          columnDef += ` DEFAULT ${col.defaultValue}`;
+        }
+
+        return columnDef;
+      })
+      .join(", ");
 
     return `CREATE TABLE IF NOT EXISTS ${table.name} (${columns})`;
   }
 
   private generateCreateIndexSQL(tableName: string, index: any): string {
-    const unique = index.unique ? 'UNIQUE ' : '';
-    const columns = index.columns.join(', ');
+    const unique = index.unique ? "UNIQUE " : "";
+    const columns = index.columns.join(", ");
     return `CREATE ${unique}INDEX ${index.name} ON ${tableName} (${columns})`;
   }
 
@@ -199,12 +211,11 @@ export class DatabaseServiceInstance implements ServiceInstance {
       for (const row of rows) {
         const columns = Object.keys(row);
         const values = Object.values(row);
-        const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
-        
-        const insertSQL = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${placeholders})`;
+        const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
+
+        const insertSQL = `INSERT INTO ${tableName} (${columns.join(", ")}) VALUES (${placeholders})`;
         await pool.query(insertSQL, values);
       }
-      console.log(`Вставлено ${rows.length} записей в таблицу ${tableName}`);
     }
   }
 }
@@ -213,12 +224,12 @@ export class DatabaseFactory implements ServiceFactory {
   async createService(serviceConfig: any): Promise<ServiceInstance> {
     return new DatabaseServiceInstance(
       serviceConfig.name,
-      'database',
-      serviceConfig.config
+      "database",
+      serviceConfig.config,
     );
   }
 
   supports(type: string): boolean {
-    return type === 'database';
+    return type === "database";
   }
-} 
+}

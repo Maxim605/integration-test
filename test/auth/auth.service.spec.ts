@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService } from '../../src/auth/auth.service';
-import { NotifierService } from '../../src/auth/notifier.service';
-import { UserRepository } from '../../src/auth/user.repository';
+import { Test, TestingModule } from "@nestjs/testing";
+import { AuthService } from "../../src/auth/auth.service";
+import { NotifierService } from "../../src/auth/notifier.service";
+import { UserRepository } from "../../src/auth/user.repository";
 
-describe('Тесты сервиса аутентификации', () => {
+describe("Тесты сервиса аутентификации", () => {
   let service: AuthService;
   let mockNotifierService: any;
   let mockUserRepository: any;
@@ -21,14 +21,14 @@ describe('Тесты сервиса аутентификации', () => {
     service = module.get<AuthService>(AuthService);
   });
 
-  it('должен возвращать true при успешной аутентификации', async () => {
-    jest.spyOn(service as any, 'authenticate').mockResolvedValue(true);
-    const result = await service.processLogin('test', '42');
-    expect(result).toEqual({ status: 'ok' });
+  it("должен возвращать true при успешной аутентификации", async () => {
+    jest.spyOn(service as any, "authenticate").mockResolvedValue(true);
+    const result = await service.processLogin("test", "42");
+    expect(result).toEqual({ status: "ok" });
   });
 
-  it('должен выбрасывать ошибку при неуспешной аутентификации', async () => {
-    jest.spyOn(service as any, 'authenticate').mockResolvedValue(false);
-    await expect(service.processLogin('fail', 'bad')).rejects.toThrow();
+  it("должен выбрасывать ошибку при неуспешной аутентификации", async () => {
+    jest.spyOn(service as any, "authenticate").mockResolvedValue(false);
+    await expect(service.processLogin("fail", "bad")).rejects.toThrow();
   });
-}); 
+});

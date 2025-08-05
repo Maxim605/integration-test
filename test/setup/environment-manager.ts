@@ -1,7 +1,12 @@
-import { ServiceFactory, ServiceInstance, TestEnvironmentConfig, ServiceConfig } from './types';
-import { DatabaseFactory } from './factories/database.factory';
-import { HttpMockFactory } from './factories/http-mock.factory';
-import { LdapFactory } from './factories/ldap.factory';
+import {
+  ServiceFactory,
+  ServiceInstance,
+  TestEnvironmentConfig,
+  ServiceConfig,
+} from "./types";
+import { DatabaseFactory } from "./factories/database.factory";
+import { HttpMockFactory } from "./factories/http-mock.factory";
+import { LdapFactory } from "./factories/ldap.factory";
 
 export class TestEnvironmentManager {
   private static instance: TestEnvironmentManager;
@@ -28,12 +33,10 @@ export class TestEnvironmentManager {
 
   async initializeEnvironment(config: TestEnvironmentConfig): Promise<void> {
     if (this.isInitialized) {
-      console.log('Test environment already initialized');
+      console.log("Test environment already initialized");
       return;
     }
 
-    console.log('Initializing test environment...');
-    
     try {
       for (const serviceConfig of config.services) {
         await this.startService(serviceConfig);
@@ -44,9 +47,9 @@ export class TestEnvironmentManager {
       }
 
       this.isInitialized = true;
-      console.log('Test environment successfully initialized');
+      console.log("Test environment successfully initialized");
     } catch (error) {
-      console.error('Error initializing test environment:', error);
+      console.error("Error initializing test environment:", error);
       await this.cleanup();
       throw error;
     }
@@ -55,18 +58,20 @@ export class TestEnvironmentManager {
   private async startService(serviceConfig: ServiceConfig): Promise<void> {
     const factory = this.findFactory(serviceConfig.type);
     if (!factory) {
-      throw new Error(`Factory for service type '${serviceConfig.type}' not found`);
+      throw new Error(
+        `Factory for service type '${serviceConfig.type}' not found`,
+      );
     }
 
     const service = await factory.createService(serviceConfig);
     await service.start();
-    
+
     this.services.set(serviceConfig.name, service);
     console.log(`Service '${serviceConfig.name}' started`);
   }
 
   private findFactory(type: string): ServiceFactory | null {
-    return this.factories.find(factory => factory.supports(type)) || null;
+    return this.factories.find((factory) => factory.supports(type)) || null;
   }
 
   private setGlobalEnvironmentVariables(config: Record<string, any>): void {
@@ -78,14 +83,14 @@ export class TestEnvironmentManager {
 
   private processPlaceholders(value: string): string {
     return value.replace(/\$\{([^}]+)\}/g, (match, placeholder) => {
-      const [serviceName, property] = placeholder.split('.');
+      const [serviceName, property] = placeholder.split(".");
       const service = this.services.get(serviceName);
-      
+
       if (service) {
         const connectionInfo = service.getConnectionInfo();
         return connectionInfo[property] || match;
       }
-      
+
       return match;
     });
   }
@@ -109,14 +114,12 @@ export class TestEnvironmentManager {
   }
 
   async cleanup(): Promise<void> {
-    console.log('Cleaning up test environment...');
-    
-    const stopPromises = Array.from(this.services.values()).map(service => service.stop());
+    const stopPromises = Array.from(this.services.values()).map((service) =>
+      service.stop(),
+    );
     await Promise.all(stopPromises);
-    
     this.services.clear();
     this.isInitialized = false;
-    console.log('Test environment cleaned up');
   }
 
   getServicesInfo(): Record<string, any> {
@@ -131,25 +134,28 @@ export class TestEnvironmentManager {
   }
 
   async startDatabase(extraSqlFiles?: string[]): Promise<any> {
-    const dbService = this.services.get('database') || this.services.get('postgres');
+    const dbService =
+      this.services.get("database") || this.services.get("postgres");
     if (!dbService) {
-      throw new Error('Database not found in test environment');
+      throw new Error("Database not found in test environment");
     }
     return dbService.getConnectionInfo();
   }
 
   async stopDatabase(): Promise<void> {
-    const dbService = this.services.get('database') || this.services.get('postgres');
+    const dbService =
+      this.services.get("database") || this.services.get("postgres");
     if (dbService) {
       await this.stopService(dbService.name);
     }
   }
 
   getDatabaseConfig(): any {
-    const dbService = this.services.get('database') || this.services.get('postgres');
+    const dbService =
+      this.services.get("database") || this.services.get("postgres");
     if (!dbService) {
-      throw new Error('Database not started');
+      throw new Error("Database not started");
     }
     return dbService.getConnectionInfo();
   }
-} 
+}

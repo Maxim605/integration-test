@@ -1,96 +1,96 @@
-import { TestEnvironmentManager } from './environment-manager';
-import { TestEnvironmentConfig } from './types';
+import { TestEnvironmentManager } from "./environment-manager";
+import { TestEnvironmentConfig } from "./types";
 
 async function main() {
   const command = process.argv[2];
 
   switch (command) {
-    case 'start':
-      console.log('Запуск тестового окружения');
+    case "start":
       try {
         const manager = TestEnvironmentManager.getInstance();
-        
-        // Конфигурация по умолчанию
+
+        // default configuration
         const config: TestEnvironmentConfig = {
           services: [
             {
-              name: 'postgres',
-              type: 'database',
+              name: "postgres",
+              type: "database",
               config: {
-                type: 'postgres',
-                version: '15-alpine',
-                user: 'postgres',
-                password: 'admin',
-                database: 'lks-test',
+                type: "postgres",
+                version: "15-alpine",
+                user: "postgres",
+                password: "admin",
+                database: "lks-test",
                 // initScripts: ['test/init-db.sql'],
                 ...(process.env.EXTRA_SQL_FILES && {
                   initScripts: [
-                    ...process.env.EXTRA_SQL_FILES.split(',').map(f => f.trim()).filter(Boolean)
-                  ]
-                })
-              }
-            }
-          ]
+                    ...process.env.EXTRA_SQL_FILES.split(",")
+                      .map((f) => f.trim())
+                      .filter(Boolean),
+                  ],
+                }),
+              },
+            },
+          ],
         };
 
         await manager.initializeEnvironment(config);
-        
+
         const servicesInfo = manager.getServicesInfo();
-        console.log('Запущенные сервисы:');
+        console.log("Running services:");
         for (const [name, info] of Object.entries(servicesInfo)) {
-          console.log(`  ${name} (${info.type}): ${JSON.stringify(info.connectionInfo)}`);
+          console.log(
+            `  ${name} (${info.type}): ${JSON.stringify(info.connectionInfo)}`,
+          );
         }
       } catch (error) {
-        console.error('Ошибка запуска тестового окружения:', error);
+        console.error("Error starting test environment:", error);
         process.exit(1);
       }
       break;
 
-    case 'stop':
-      console.log('Остановка тестового окружения');
+    case "stop":
       try {
         const manager = TestEnvironmentManager.getInstance();
         await manager.cleanup();
       } catch (error) {
-        console.error('Ошибка остановки тестового окружения:', error);
+        console.error("Error stopping test environment:", error);
         process.exit(1);
       }
       break;
 
-    case 'status':
+    case "status":
       try {
         const manager = TestEnvironmentManager.getInstance();
         const servicesInfo = manager.getServicesInfo();
-        
+
         if (Object.keys(servicesInfo).length === 0) {
-          console.log('Тестовое окружение не запущено');
+          console.log("Test environment is not running");
         } else {
-          console.log('Запущенные сервисы:');
+          console.log("Running services:");
           for (const [name, info] of Object.entries(servicesInfo)) {
-            console.log(`  ${name} (${info.type}): ${JSON.stringify(info.connectionInfo)}`);
+            console.log(
+              `  ${name} (${info.type}): ${JSON.stringify(info.connectionInfo)}`,
+            );
           }
         }
       } catch (error) {
-        console.log('Тестовое окружение не запущено');
+        console.log("Test environment is not running");
       }
       break;
 
     default:
-      console.log('Доступные команды:');
-      console.log('  start  - запустить тестовое окружение');
-      console.log('  stop   - остановить тестовое окружение');
-      console.log('  status - показать статус сервисов');
       break;
   }
 }
 
-process.on('SIGINT', async () => {
+process.on("SIGINT", async () => {
   const manager = TestEnvironmentManager.getInstance();
   await manager.cleanup();
   process.exit(0);
 });
 
 main().catch((error) => {
-  console.error('CLI ошибка:', error);
+  console.error("CLI error:", error);
   process.exit(1);
-}); 
+});

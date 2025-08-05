@@ -1,8 +1,13 @@
-import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
-import { ServiceFactory, ServiceInstance, HttpMockConfig, HttpRouteConfig } from '../types';
-import express from 'express';
-import cors from 'cors';
-import { createServer } from 'net';
+import { GenericContainer, StartedTestContainer, Wait } from "testcontainers";
+import {
+  ServiceFactory,
+  ServiceInstance,
+  HttpMockConfig,
+  HttpRouteConfig,
+} from "../types";
+import express from "express";
+import cors from "cors";
+import { createServer } from "net";
 
 export class HttpMockServiceInstance implements ServiceInstance {
   private container: StartedTestContainer | null = null;
@@ -13,41 +18,39 @@ export class HttpMockServiceInstance implements ServiceInstance {
   constructor(
     public name: string,
     public type: string,
-    public config: HttpMockConfig
+    public config: HttpMockConfig,
   ) {
     console.log(`[${this.name}] HttpMockServiceInstance with config:`, {
       name: this.name,
       type: this.type,
-      config: this.config
+      config: this.config,
     });
   }
 
   async start(): Promise<void> {
-  
     this.app = express();
-    console.log(`[${this.name}] Express started`);
-    
     this.setupMiddleware();
-    console.log(`[${this.name}] Middleware configured`);
-    
     this.setupRoutes();
-    console.log(`[${this.name}] Routes configured`);
-    
-    const port = await this.findAvailablePort(this.config.port || 3001);
-    console.log(`[${this.name}] Found free port: ${port}`);
-    
-    this.server = this.app!.listen(port, () => {
-      console.log(`HTTP Mock service ${this.name} started on port ${port}`);
-    });
 
-    this.connectionInfo = {
-      host: 'localhost',
-      port,
-      baseUrl: `http://localhost:${port}`,
-    };
+    try {
+      const port = await this.findAvailablePort(this.config.port || 3001);
+      console.log(`[${this.name}] Found free port: ${port}`);
 
-    await this.waitForServer();
-    console.log(`[${this.name}] Server ready`);
+      this.server = this.app!.listen(port, () => {
+        console.log(`HTTP Mock service ${this.name} started on port ${port}`);
+      });
+
+      this.connectionInfo = {
+        host: "localhost",
+        port,
+        baseUrl: `http://localhost:${port}`,
+      };
+
+      await this.waitForServer();
+    } catch (error) {
+      console.error(`[${this.name}] Failed to start server: ${error}`);
+      throw error;
+    }
   }
 
   async stop(): Promise<void> {
@@ -63,14 +66,37 @@ export class HttpMockServiceInstance implements ServiceInstance {
   }
 
   private async findAvailablePort(startPort: number): Promise<number> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const server = createServer();
       server.listen(startPort, () => {
         const port = (server.address() as any).port;
         server.close(() => resolve(port));
       });
-      server.on('error', () => {
-        resolve(this.findAvailablePort(startPort + 1));
+      server.on("error", () => {
+        if (this.config.strictPort) {
+          server.close();
+          reject(
+            new Error(
+              `Port ${startPort} is not available and strictPort is enabled`,
+            ),
+          );
+          return;
+        }
+
+        const nextPort = startPort + 1;
+        if (this.config.portRange) {
+          if (nextPort > this.config.portRange.max) {
+            server.close();
+            reject(
+              new Error(
+                `No available ports in range ${this.config.portRange.min}-${this.config.portRange.max}`,
+              ),
+            );
+            return;
+          }
+        }
+
+        resolve(this.findAvailablePort(nextPort));
       });
     });
   }
@@ -99,16 +125,16 @@ export class HttpMockServiceInstance implements ServiceInstance {
     if (!this.app) return;
 
     switch (middleware.type) {
-      case 'auth':
+      case "auth":
         this.app.use((req, res, next) => {
           const authHeader = req.headers.authorization;
           if (!authHeader) {
-            return res.status(401).json({ error: 'Unauthorized' });
+            return res.status(401).json({ error: "Unauthorized" });
           }
           next();
         });
         break;
-      case 'logging':
+      case "logging":
         this.app.use((req, res, next) => {
           console.log(`[${this.name}] Request:`, {
             method: req.method,
@@ -119,8 +145,8 @@ export class HttpMockServiceInstance implements ServiceInstance {
           next();
         });
         break;
-      case 'custom':
-        if (middleware.config && typeof middleware.config === 'function') {
+      case "custom":
+        if (middleware.config && typeof middleware.config === "function") {
           this.app.use(middleware.config);
         }
         break;
@@ -128,32 +154,22 @@ export class HttpMockServiceInstance implements ServiceInstance {
   }
 
   private setupRoutes(): void {
-    console.log(`[${this.name}] setupRoutes вызван`);
-    console.log(`[${this.name}] this.app:`, !!this.app);
-    console.log(`[${this.name}] this.config:`, this.config);
-    console.log(`[${this.name}] this.config.config:`, (this.config as any).config);
-    
     const actualConfig = (this.config as any).config || this.config;
-    console.log(`[${this.name}] actualConfig.routes:`, actualConfig.routes);
-    
+
     if (!this.app || !actualConfig.routes) {
-      console.log(`[${this.name}] Early exit from setupRoutes`);
       return;
     }
 
-    console.log(`[${this.name}] Setting up routes:`, actualConfig.routes.length);
-
     for (const route of actualConfig.routes) {
-      console.log(`[${this.name}] Registering route: ${route.method} ${route.path}`);
       this.setupRoute(route);
     }
 
-    this.app.use('*', (req, res) => {
-      console.log(`[${this.name}] 404 для маршрута: ${req.method} ${req.path}`);
-      res.status(404).json({ 
-        error: 'Route not found',
+    this.app.use("*", (req, res) => {
+      console.log(`[${this.name}] 404 for route: ${req.method} ${req.path}`);
+      res.status(404).json({
+        error: "Route not found",
         method: req.method,
-        path: req.path 
+        path: req.path,
       });
     });
   }
@@ -164,11 +180,11 @@ export class HttpMockServiceInstance implements ServiceInstance {
     const handler = async (req: express.Request, res: express.Response) => {
       try {
         if (route.condition && !route.condition(req)) {
-          return res.status(404).json({ error: 'Route condition not met' });
+          return res.status(404).json({ error: "Route condition not met" });
         }
 
         if (route.delay) {
-          await new Promise(resolve => setTimeout(resolve, route.delay));
+          await new Promise((resolve) => setTimeout(resolve, route.delay));
         }
 
         if (route.response.headers) {
@@ -185,30 +201,25 @@ export class HttpMockServiceInstance implements ServiceInstance {
         res.status(route.response.status).json(route.response.body);
       } catch (error) {
         console.error(`Error in route ${route.method} ${route.path}:`, error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: "Internal server error" });
       }
     };
 
     switch (route.method) {
-      case 'GET':
+      case "GET":
         this.app.get(route.path, handler);
-        console.log(`[${this.name}] Зарегистрирован GET ${route.path}`);
         break;
-      case 'POST':
+      case "POST":
         this.app.post(route.path, handler);
-        console.log(`[${this.name}] Зарегистрирован POST ${route.path}`);
         break;
-      case 'PUT':
+      case "PUT":
         this.app.put(route.path, handler);
-        console.log(`[${this.name}] Зарегистрирован PUT ${route.path}`);
         break;
-      case 'DELETE':
+      case "DELETE":
         this.app.delete(route.path, handler);
-        console.log(`[${this.name}] Зарегистрирован DELETE ${route.path}`);
         break;
-      case 'PATCH':
+      case "PATCH":
         this.app.patch(route.path, handler);
-        console.log(`[${this.name}] Зарегистрирован PATCH ${route.path}`);
         break;
     }
   }
@@ -229,15 +240,20 @@ export class HttpMockServiceInstance implements ServiceInstance {
 
 export class HttpMockFactory implements ServiceFactory {
   async createService(config: any): Promise<ServiceInstance> {
-    console.log(`[HttpMockFactory] createService вызван с конфигурацией:`, config);
+    return new HttpMockServiceInstance(
+      config.name,
+      "http-mock",
+      config.config || config,
+    );
+    
     return new HttpMockServiceInstance(
       config.name,
       'http-mock',
-      config
+      config.config || config
     );
   }
 
   supports(type: string): boolean {
-    return type === 'http-mock';
+    return type === "http-mock";
   }
-} 
+}

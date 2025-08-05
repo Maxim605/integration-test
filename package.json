@@ -26,11 +26,13 @@
     "@types/pg": "^8.15.4",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "prettier": "^3.6.2"
   },
   "scripts": {
     "start": "ts-node src/main.ts",
-    "test": "tsc --outDir dist && node test-with-docker.js"
+    "test": "tsc --outDir dist && node test-with-docker.js",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\""
   },
   "compilerOptions": {
     "module": "CommonJS",
