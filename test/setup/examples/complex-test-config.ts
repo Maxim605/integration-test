@@ -20,7 +20,6 @@ export const complexTestConfig: TestEnvironmentConfig = {
                 name: "id",
                 type: "SERIAL",
                 primaryKey: true,
-                autoIncrement: true,
               },
               { name: "username", type: "VARCHAR(50)", nullable: false },
               { name: "email", type: "VARCHAR(100)", nullable: false },
@@ -98,6 +97,7 @@ export const complexTestConfig: TestEnvironmentConfig = {
       type: "http-mock",
       config: {
         port: 3001,
+        strictPort: true,
         routes: [
           {
             method: "GET",

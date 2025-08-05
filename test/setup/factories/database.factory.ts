@@ -162,14 +162,6 @@ export class DatabaseServiceInstance implements ServiceInstance {
       .map((col) => {
         let columnDef = `${col.name} ${col.type}`;
 
-        if (!col.nullable) {
-          columnDef += " NOT NULL";
-        }
-
-        if (col.primaryKey) {
-          columnDef += " PRIMARY KEY";
-        }
-
         if (col.autoIncrement) {
           if (col.type.toUpperCase().includes("SERIAL")) {
             columnDef = `${col.name} ${col.type}`;
@@ -180,17 +172,18 @@ export class DatabaseServiceInstance implements ServiceInstance {
           if (!col.nullable) {
             columnDef += " NOT NULL";
           }
-
+          
           if (col.primaryKey) {
             columnDef += " PRIMARY KEY";
           }
 
-        if (col.unique) {
-          columnDef += " UNIQUE";
-        }
+          if (col.unique) {
+            columnDef += " UNIQUE";
+          }
 
-        if (col.defaultValue !== undefined) {
-          columnDef += ` DEFAULT ${col.defaultValue}`;
+          if (col.defaultValue !== undefined) {
+            columnDef += ` DEFAULT ${col.defaultValue}`;
+          }
         }
 
         return columnDef;

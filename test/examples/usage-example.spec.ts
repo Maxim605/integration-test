@@ -60,7 +60,8 @@ describe("Практический пример использования си�
           name: "auth-api",
           type: "http-mock",
           config: {
-            port: 3001,
+            port: 3002,
+            strictPort: true,
             routes: [
               {
                 method: "POST",
@@ -112,7 +113,7 @@ describe("Практический пример использования си�
         USER_DB_USER: "${user-db.user}",
         USER_DB_PASSWORD: "${user-db.password}",
         USER_DB_NAME: "${user-db.database}",
-        AUTH_API_URL: "http://localhost:3001",
+        AUTH_API_URL: "http://localhost:3002",
       },
     };
 
@@ -133,7 +134,7 @@ describe("Практический пример использования си�
     it("должен иметь доступ к API аутентификации", async () => {
       const apiInfo = manager.getServiceConnectionInfo("auth-api");
       expect(apiInfo).toBeDefined();
-      expect(apiInfo.baseUrl).toBe("http://localhost:3001");
+      expect(apiInfo.baseUrl).toBe("http://localhost:3002");
 
       const loginResponse = await fetch(`${apiInfo.baseUrl}/api/auth/login`, {
         method: "POST",
