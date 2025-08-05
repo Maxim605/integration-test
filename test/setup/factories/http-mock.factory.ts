@@ -245,11 +245,11 @@ export class HttpMockFactory implements ServiceFactory {
       "http-mock",
       config.config || config,
     );
-    
+
     return new HttpMockServiceInstance(
       config.name,
-      'http-mock',
-      config.config || config
+      "http-mock",
+      config.config || config,
     );
   }
 
