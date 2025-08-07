@@ -1,13 +1,16 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { NotifierService } from "./notifier.service";
-import { UserRepository } from "./user.repository";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Users } from "./entities/users.entity";
 import axios from "axios";
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly notifierService: NotifierService,
-    private readonly userRepository: UserRepository,
+    @InjectRepository(Users)
+    private readonly usersRepository: Repository<Users>,
   ) {}
 
   async authenticate(login: string, password: string): Promise<boolean> {
@@ -28,7 +31,13 @@ export class AuthService {
     const authResult = await this.authenticate(login, password);
     if (!authResult) throw new UnauthorizedException();
 
-    await this.userRepository.save({ login, password });
+    let user = await this.usersRepository.findOne({ where: { login } });
+    if (user) {
+      user.password = password;
+    } else {
+      user = this.usersRepository.create({ login, password });
+    }
+    await this.usersRepository.save(user);
     await this.notifierService.sendNotification({ message: "сообщение" });
 
     return { status: "ok" };
