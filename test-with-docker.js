@@ -1,7 +1,7 @@
 const { spawn } = require('child_process');
-
+const fs = require('fs');
 const path = require('path');
-const cli = path.join(__dirname, 'test', 'setup', 'jest-docker-cli.ts');
+
 const jestBin = path.join(__dirname, 'node_modules', '.bin', 'jest');
 
 const rawArgs = process.argv.slice(2);
@@ -44,14 +44,9 @@ async function run(cmd, args, opts = {}) {
 
 (async () => {
   try {
-    const env = { ...process.env };
-    if (extraSqlFiles.length > 0) {
-      env.EXTRA_SQL_FILES = extraSqlFiles.join(',');
-    }
-    await run('npx', ['ts-node', cli, 'start'], { env });
+    const env = { ...process.env, SETTINGS_FILE: './settings.spec.yml' };
     await run(jestBin, jestArgs, { env });
   } finally {
-    await run('npx', ['ts-node', cli, 'stop']);
     process.exit(0);
   }
 })(); 

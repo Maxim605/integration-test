@@ -34,7 +34,9 @@ function validateSettings(settings: Settings): Settings {
   return settings;
 }
 
-function getSettings(settingsFilePath = "./settings.yml"): Settings {
+function getSettings(
+  settingsFilePath = process.env.SETTINGS_FILE || "./settings.yml",
+): Settings {
   let settings = parseYml(settingsFilePath);
 
   if (!settings) {

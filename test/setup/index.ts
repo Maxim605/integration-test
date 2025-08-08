@@ -1,5 +1,4 @@
 export * from "./types";
-export { TestEnvironmentManager } from "./environment-manager";
 
 // factories
 export {
@@ -21,3 +20,4 @@ export { complexTestConfig } from "./examples/complex-test-config";
 
 // old
 export { TestContainerSetup } from "./test-container.setup";
+export * from "./services";

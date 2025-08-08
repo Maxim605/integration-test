@@ -8,11 +8,11 @@ const entities = [Users];
 
 export const config: DataSourceOptions = {
   type: "postgres",
-  host: db.host,
-  port: db.port,
-  username: db.user,
-  password: db.password,
-  database: db.database,
+  host: process.env.DATABASE_HOST || db.host,
+  port: process.env.DATABASE_PORT ? Number(process.env.DATABASE_PORT) : db.port,
+  username: process.env.DATABASE_USER || db.user,
+  password: process.env.DATABASE_PASSWORD || db.password,
+  database: process.env.DATABASE_NAME || db.database,
   entities,
   synchronize: false,
 };

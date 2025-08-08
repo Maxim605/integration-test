@@ -25,9 +25,7 @@ export class LdapServiceInstance implements ServiceInstance {
     this.setupUsers();
     this.setupGroups();
     const port = this.config.port || 389;
-    this.server.listen(port, () => {
-      console.log(`LDAP сервис ${this.name} запущен на порту ${port}`);
-    });
+    this.server.listen(port, () => {});
 
     this.connectionInfo = {
       name: this.name,
@@ -41,9 +39,7 @@ export class LdapServiceInstance implements ServiceInstance {
 
   async stop(): Promise<void> {
     if (this.server) {
-      this.server.close(() => {
-        console.log(`LDAP сервис ${this.name} остановлен`);
-      });
+      this.server.close(() => {});
       this.server = null;
     }
   }

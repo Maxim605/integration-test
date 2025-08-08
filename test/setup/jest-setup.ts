@@ -5,6 +5,9 @@ jest.setTimeout(30000);
 beforeAll(() => {
   process.env.NODE_ENV = "test";
   process.env.MOCK_BASE_URL = "http://localhost:3001";
+  // Disable Ryuk to avoid reaper connection issues on some Windows setups
+  process.env.TESTCONTAINERS_RYUK_DISABLED = "true";
+  process.env.TESTCONTAINERS_CHECKS_DISABLE = "true";
 });
 
 afterEach(() => {

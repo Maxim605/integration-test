@@ -48,9 +48,9 @@ export class ConfigLoader {
           config: {
             type: "postgres",
             version: "15-alpine",
-            user: "postgres",
-            password: "admin",
-            database: "lks-test",
+            user: process.env.POSTGRES_USER,
+            password: process.env.POSTGRES_PASSWORD,
+            database: process.env.POSTGRES_DB,
             initScripts: ["test/init-db.sql"],
           },
         },
