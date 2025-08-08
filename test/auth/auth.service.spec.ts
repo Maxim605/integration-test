@@ -1,21 +1,26 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { AuthService } from "../../src/auth/auth.service";
 import { NotifierService } from "../../src/auth/notifier.service";
-import { UserRepository } from "../../src/auth/user.repository";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { Users } from "../../src/auth/entities/users.entity";
 
 describe("Тесты сервиса аутентификации", () => {
   let service: AuthService;
   let mockNotifierService: any;
-  let mockUserRepository: any;
+  let mockTypeOrmUsersRepository: any;
 
   beforeEach(async () => {
     mockNotifierService = { sendNotification: jest.fn() };
-    mockUserRepository = { save: jest.fn() };
+    mockTypeOrmUsersRepository = {
+      findOne: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockImplementation((data) => data),
+      save: jest.fn().mockImplementation(async (data) => ({ id: 1, ...data })),
+    };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: NotifierService, useValue: mockNotifierService },
-        { provide: UserRepository, useValue: mockUserRepository },
+        { provide: getRepositoryToken(Users), useValue: mockTypeOrmUsersRepository },
       ],
     }).compile();
     service = module.get<AuthService>(AuthService);

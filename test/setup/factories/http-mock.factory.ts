@@ -163,10 +163,14 @@ export class HttpMockServiceInstance implements ServiceInstance {
   private setupRoute(route: HttpRouteConfig): void {
     if (!this.app) return;
 
-    const handler = async (req: express.Request, res: express.Response) => {
+    const handler = async (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction,
+    ) => {
       try {
         if (route.condition && !route.condition(req)) {
-          return res.status(404).json({ error: "Route condition not met" });
+          return next();
         }
 
         if (route.delay) {
@@ -181,7 +185,21 @@ export class HttpMockServiceInstance implements ServiceInstance {
 
         if (route.response.dynamic) {
           const dynamicResponse = route.response.dynamic(req);
-          return res.status(route.response.status).json(dynamicResponse);
+          const dynStatus =
+            dynamicResponse && typeof dynamicResponse.status === "number"
+              ? dynamicResponse.status
+              : route.response.status;
+          const dynHeaders = dynamicResponse?.headers;
+          if (dynHeaders && typeof dynHeaders === "object") {
+            for (const [k, v] of Object.entries(dynHeaders)) {
+              res.setHeader(k, v as any);
+            }
+          }
+          const body =
+            dynamicResponse && dynamicResponse.body !== undefined
+              ? dynamicResponse.body
+              : dynamicResponse;
+          return res.status(dynStatus).json(body);
         }
 
         res.status(route.response.status).json(route.response.body);

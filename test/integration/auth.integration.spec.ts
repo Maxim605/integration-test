@@ -3,7 +3,7 @@ import { INestApplication, ValidationPipe } from "@nestjs/common";
 import request from "supertest";
 import { Pool } from "pg";
 import { createTestPool } from "../setup/db-pool";
-import { TestEnvironmentManager } from "../setup/environment-manager";
+import { startServices, stopServices } from "../setup/services";
 import { TestEnvironmentConfig } from "../setup/types";
 
 const testConfig: TestEnvironmentConfig = {
@@ -83,23 +83,17 @@ const testConfig: TestEnvironmentConfig = {
 describe("Интеграционные тесты аутентификации", () => {
   let app: INestApplication;
   let dbPool: Pool;
-  let manager: TestEnvironmentManager;
+  let services: Map<string, any>;
 
   beforeAll(async () => {
-    manager = TestEnvironmentManager.getInstance();
-    await manager.initializeEnvironment(testConfig);
-
-    process.env.DATABASE_HOST =
-      manager.getServiceConnectionInfo("test-db").host;
-    process.env.DATABASE_PORT = manager
-      .getServiceConnectionInfo("test-db")
-      .port.toString();
-    process.env.DATABASE_USER =
-      manager.getServiceConnectionInfo("test-db").user;
-    process.env.DATABASE_PASSWORD =
-      manager.getServiceConnectionInfo("test-db").password;
-    process.env.DATABASE_NAME =
-      manager.getServiceConnectionInfo("test-db").database;
+    const started = await startServices(testConfig);
+    services = started.services;
+    const dbInfo = services.get("test-db").connectionInfo;
+    process.env.DATABASE_HOST = dbInfo.host;
+    process.env.DATABASE_PORT = String(dbInfo.port);
+    process.env.DATABASE_USER = dbInfo.user;
+    process.env.DATABASE_PASSWORD = dbInfo.password;
+    process.env.DATABASE_NAME = dbInfo.database;
 
     const { AppModule } = await import("../../src/app.module");
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -109,12 +103,13 @@ describe("Интеграционные тесты аутентификации",
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());
     await app.init();
-    dbPool = createTestPool(manager.getServiceConnectionInfo("test-db"));
+    dbPool = createTestPool(dbInfo);
   });
 
   afterAll(async () => {
     await app.close();
     await dbPool.end();
+    if (services) await stopServices(services);
   });
 
   beforeEach(async () => {

@@ -1,17 +1,47 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import request from "supertest";
-import { AppModule } from "../../src/app.module";
 import nock from "nock";
 import { Pool } from "pg";
 import { createTestPool } from "../setup/db-pool";
+import { startServices, stopServices } from "../setup/services";
+import { TestEnvironmentConfig } from "../setup/types";
 
 describe("E2E тесты аутентификации с моками внешних сервисов", () => {
   let app: INestApplication;
   let dbPool: Pool | null;
+  let services: Map<string, any>;
   const baseUrl = process.env.MOCK_BASE_URL || "http://localhost:3001";
 
   beforeAll(async () => {
+    const testEnv: TestEnvironmentConfig = {
+      services: [
+        {
+          name: "postgres",
+          type: "database",
+          config: {
+            type: "postgres",
+            version: "15-alpine",
+            user: "postgres",
+            password: "admin",
+            database: "test-db",
+            initScripts: ["test/init-db.sql"],
+          },
+        },
+      ],
+      globalConfig: {
+        DATABASE_HOST: "${postgres.host}",
+        DATABASE_PORT: "${postgres.port}",
+        DATABASE_USER: "${postgres.user}",
+        DATABASE_PASSWORD: "${postgres.password}",
+        DATABASE_NAME: "${postgres.database}",
+        MOCK_BASE_URL: "http://localhost:3001",
+      },
+    };
+
+    const started = await startServices(testEnv);
+    services = started.services;
+    const { AppModule } = await import("../../src/app.module");
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -32,12 +62,13 @@ describe("E2E тесты аутентификации с моками внешн
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) await app.close();
     if (dbPool) {
       await dbPool.end();
       dbPool = null;
     }
     nock.cleanAll();
+    if (services) await stopServices(services);
   });
 
   beforeEach(async () => {

@@ -1,5 +1,7 @@
-import { TestEnvironmentManager } from "./environment-manager";
 import { TestEnvironmentConfig } from "./types";
+import { startServices } from "./services";
+import * as fs from "fs";
+import * as path from "path";
 
 async function main() {
   const command = process.argv[2];
@@ -7,7 +9,6 @@ async function main() {
   switch (command) {
     case "start":
       try {
-        const manager = TestEnvironmentManager.getInstance();
 
         // default configuration
         const config: TestEnvironmentConfig = {
@@ -39,11 +40,10 @@ async function main() {
           },
         };
 
-        await manager.initializeEnvironment(config);
-
-        const fs = require("fs");
-        const path = require("path");
-        const conn = manager.getServiceConnectionInfo("postgres");
+        const started = await startServices(config);
+        const svc = started.services.get("postgres");
+        if (!svc) throw new Error("postgres service not started");
+        const conn = svc.connectionInfo;
         const outEnv = {
           DATABASE_HOST: String(conn.host),
           DATABASE_PORT: String(conn.port),
@@ -62,8 +62,8 @@ async function main() {
 
     case "stop":
       try {
-        const manager = TestEnvironmentManager.getInstance();
-        await manager.cleanup();
+        const outFile = path.resolve(process.cwd(), "test/.test-env.json");
+        if (fs.existsSync(outFile)) fs.rmSync(outFile);
       } catch (error) {
         console.error("Error stopping test environment:", error);
         process.exit(1);
@@ -71,12 +71,7 @@ async function main() {
       break;
 
     case "status":
-      try {
-        const manager = TestEnvironmentManager.getInstance();
-        const servicesInfo = manager.getServicesInfo();
-      } catch (error) {
-        console.log("Test environment is not running");
-      }
+      console.log("Test environment is not running");
       break;
 
     default:
@@ -85,8 +80,6 @@ async function main() {
 }
 
 process.on("SIGINT", async () => {
-  const manager = TestEnvironmentManager.getInstance();
-  await manager.cleanup();
   process.exit(0);
 });
 
