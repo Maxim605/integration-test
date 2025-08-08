@@ -1,7 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import request from "supertest";
-import { AppModule } from "../../src/app.module";
 import { Pool } from "pg";
 import { createTestPool } from "../setup/db-pool";
 import { TestEnvironmentManager } from "../setup/environment-manager";
@@ -102,6 +101,7 @@ describe("Интеграционные тесты аутентификации",
     process.env.DATABASE_NAME =
       manager.getServiceConnectionInfo("test-db").database;
 
+    const { AppModule } = await import("../../src/app.module");
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();

@@ -1,3 +1,4 @@
+import settings from "../settings";
 import { TestEnvironmentConfig } from "../types";
 
 export const complexTestConfig: TestEnvironmentConfig = {
@@ -146,9 +147,9 @@ export const complexTestConfig: TestEnvironmentConfig = {
     // LDAP
     {
       name: "ldap-server",
-      type: "ldap",
+      type: settings.ldap.type,
       config: {
-        port: 389,
+        port: settings.ldap.defaultPort,
         baseDN: "dc=example,dc=com",
         users: [
           {

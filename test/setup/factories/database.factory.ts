@@ -42,7 +42,6 @@ export class DatabaseServiceInstance implements ServiceInstance {
       database: String(this.config.database || "test-db"),
     };
 
-    console.log(`db ${this.name} started on ${host}:${port}`);
     await this.initializeDatabase();
   }
 
@@ -80,20 +79,20 @@ export class DatabaseServiceInstance implements ServiceInstance {
 
     switch (dbType) {
       case "postgres":
-        env.POSTGRES_USER = this.config.user || "postgres";
-        env.POSTGRES_PASSWORD = this.config.password || "admin";
-        env.POSTGRES_DB = this.config.database || "test-db";
+        env.POSTGRES_USER = String(this.config.user || "postgres");
+        env.POSTGRES_PASSWORD = String(this.config.password || "admin");
+        env.POSTGRES_DB = String(this.config.database);
         break;
       case "mysql":
-        env.MYSQL_ROOT_PASSWORD = this.config.password || "admin";
-        env.MYSQL_DATABASE = this.config.database || "test-db";
-        env.MYSQL_USER = this.config.user || "test";
-        env.MYSQL_PASSWORD = this.config.password || "test";
+        env.MYSQL_ROOT_PASSWORD = String(this.config.password || "admin");
+        env.MYSQL_DATABASE = String(this.config.database);
+        env.MYSQL_USER = String(this.config.user || "test");
+        env.MYSQL_PASSWORD = String(this.config.password || "test");
         break;
       default:
-        env.POSTGRES_USER = this.config.user || "postgres";
-        env.POSTGRES_PASSWORD = this.config.password || "admin";
-        env.POSTGRES_DB = this.config.database || "test-db";
+        env.POSTGRES_USER = String(this.config.user || "postgres");
+        env.POSTGRES_PASSWORD = String(this.config.password || "admin");
+        env.POSTGRES_DB = String(this.config.database);
         break;
     }
 
@@ -105,6 +104,31 @@ export class DatabaseServiceInstance implements ServiceInstance {
       throw new Error("Database not started");
     }
     await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    const adminPool = createTestPool({
+      host: this.connectionInfo.host,
+      port: Number(this.connectionInfo.port),
+      user: this.connectionInfo.user,
+      password: this.connectionInfo.password,
+      database: "postgres",
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+      max: 1,
+    });
+
+    const targetDbName = String(this.connectionInfo.database);
+
+    try {
+      const existsRes = await adminPool.query(
+        `SELECT 1 FROM pg_database WHERE datname = $1`,
+        [targetDbName],
+      );
+      if (existsRes.rowCount === 0) {
+        await adminPool.query(`CREATE DATABASE "${targetDbName}"`);
+      }
+    } finally {
+      await adminPool.end();
+    }
 
     const pool = createTestPool({
       ...this.connectionInfo,
@@ -133,8 +157,6 @@ export class DatabaseServiceInstance implements ServiceInstance {
       if (this.config.data) {
         await this.insertData(pool);
       }
-
-      console.log(`Database ${this.name} initialized`);
     } catch (error) {
       console.error(`Error initializing database ${this.name}:`, error);
       throw error;
@@ -172,7 +194,7 @@ export class DatabaseServiceInstance implements ServiceInstance {
           if (!col.nullable) {
             columnDef += " NOT NULL";
           }
-          
+
           if (col.primaryKey) {
             columnDef += " PRIMARY KEY";
           }

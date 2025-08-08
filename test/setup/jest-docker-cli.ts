@@ -20,8 +20,6 @@ async function main() {
                 version: "15-alpine",
                 user: "postgres",
                 password: "admin",
-                database: "lks-test",
-                // initScripts: ['test/init-db.sql'],
                 ...(process.env.EXTRA_SQL_FILES && {
                   initScripts: [
                     ...process.env.EXTRA_SQL_FILES.split(",")
@@ -32,17 +30,30 @@ async function main() {
               },
             },
           ],
+          globalConfig: {
+            DATABASE_HOST: "${postgres.host}",
+            DATABASE_PORT: "${postgres.port}",
+            DATABASE_USER: "${postgres.user}",
+            DATABASE_PASSWORD: "${postgres.password}",
+            DATABASE_NAME: "${postgres.database}",
+          },
         };
 
         await manager.initializeEnvironment(config);
 
-        const servicesInfo = manager.getServicesInfo();
-        console.log("Running services:");
-        for (const [name, info] of Object.entries(servicesInfo)) {
-          console.log(
-            `  ${name} (${info.type}): ${JSON.stringify(info.connectionInfo)}`,
-          );
-        }
+        const fs = require("fs");
+        const path = require("path");
+        const conn = manager.getServiceConnectionInfo("postgres");
+        const outEnv = {
+          DATABASE_HOST: String(conn.host),
+          DATABASE_PORT: String(conn.port),
+          DATABASE_USER: String(conn.user),
+          DATABASE_PASSWORD: String(conn.password),
+          DATABASE_NAME: String(conn.database),
+        };
+        const outFile = path.resolve(process.cwd(), "test/.test-env.json");
+        fs.mkdirSync(path.dirname(outFile), { recursive: true });
+        fs.writeFileSync(outFile, JSON.stringify(outEnv, null, 2), "utf-8");
       } catch (error) {
         console.error("Error starting test environment:", error);
         process.exit(1);
@@ -63,17 +74,6 @@ async function main() {
       try {
         const manager = TestEnvironmentManager.getInstance();
         const servicesInfo = manager.getServicesInfo();
-
-        if (Object.keys(servicesInfo).length === 0) {
-          console.log("Test environment is not running");
-        } else {
-          console.log("Running services:");
-          for (const [name, info] of Object.entries(servicesInfo)) {
-            console.log(
-              `  ${name} (${info.type}): ${JSON.stringify(info.connectionInfo)}`,
-            );
-          }
-        }
       } catch (error) {
         console.log("Test environment is not running");
       }

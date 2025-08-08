@@ -24,7 +24,6 @@ export class TestContainerSetup {
       .withEnvironment({
         POSTGRES_USER: "postgres",
         POSTGRES_PASSWORD: "admin",
-        POSTGRES_DB: "lks-test",
       })
       .withExposedPorts(5432)
       .withWaitStrategy(
@@ -45,7 +44,6 @@ export class TestContainerSetup {
       database: "lks-test",
     };
 
-    console.log(`Контейнер PostgreSQL запущен на ${host}:${port}`);
     await this.initializeDatabase(extraSqlFiles);
     return this.databaseConfig;
   }
@@ -60,7 +58,6 @@ export class TestContainerSetup {
   private static async initializeDatabase(
     extraSqlFiles?: string[],
   ): Promise<void> {
-    console.log("Ожидание готовности базы данных...");
     await new Promise((resolve) => setTimeout(resolve, 3000));
     const pool = createTestPool({
       ...this.databaseConfig,
@@ -70,7 +67,6 @@ export class TestContainerSetup {
     });
     try {
       await pool.query("SELECT 1");
-      console.log("Подключение к базе данных установлено");
       const fs = require("fs");
       const path = require("path");
       const initScript = fs.readFileSync(
@@ -85,12 +81,10 @@ export class TestContainerSetup {
           const resolvedPath = path.resolve(process.cwd(), file);
           const sql = fs.readFileSync(resolvedPath, "utf8");
           await pool.query(sql);
-          console.log(`Выполнен скрипт: ${file}`);
         }
       }
-      console.log("База данных инициализирована");
     } catch (error) {
-      console.error("Ошибка инициализации базы данных:", error);
+      console.error("Init error:", error);
       throw error;
     } finally {
       await pool.end();

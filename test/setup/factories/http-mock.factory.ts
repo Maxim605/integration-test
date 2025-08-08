@@ -19,13 +19,7 @@ export class HttpMockServiceInstance implements ServiceInstance {
     public name: string,
     public type: string,
     public config: HttpMockConfig,
-  ) {
-    console.log(`[${this.name}] HttpMockServiceInstance with config:`, {
-      name: this.name,
-      type: this.type,
-      config: this.config,
-    });
-  }
+  ) {}
 
   async start(): Promise<void> {
     this.app = express();
@@ -34,7 +28,6 @@ export class HttpMockServiceInstance implements ServiceInstance {
 
     try {
       const port = await this.findAvailablePort(this.config.port || 3001);
-      console.log(`[${this.name}] Found free port: ${port}`);
 
       this.server = this.app!.listen(port, () => {
         console.log(`HTTP Mock service ${this.name} started on port ${port}`);
@@ -110,7 +103,6 @@ export class HttpMockServiceInstance implements ServiceInstance {
     this.app.use(express.urlencoded({ extended: true }));
 
     this.app.use((req, res, next) => {
-      console.log(`[${this.name}] ${req.method} ${req.path}`);
       next();
     });
 
@@ -136,12 +128,6 @@ export class HttpMockServiceInstance implements ServiceInstance {
         break;
       case "logging":
         this.app.use((req, res, next) => {
-          console.log(`[${this.name}] Request:`, {
-            method: req.method,
-            url: req.url,
-            headers: req.headers,
-            body: req.body,
-          });
           next();
         });
         break;
@@ -240,12 +226,6 @@ export class HttpMockServiceInstance implements ServiceInstance {
 
 export class HttpMockFactory implements ServiceFactory {
   async createService(config: any): Promise<ServiceInstance> {
-    return new HttpMockServiceInstance(
-      config.name,
-      "http-mock",
-      config.config || config,
-    );
-
     return new HttpMockServiceInstance(
       config.name,
       "http-mock",

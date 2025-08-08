@@ -1,4 +1,5 @@
 export default async function globalSetup(): Promise<void> {
+  process.env.SETTINGS_FILE = "./settings.spec.yml";
   try {
     // global setup initialization params
   } catch (error) {

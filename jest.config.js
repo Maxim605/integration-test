@@ -21,7 +21,11 @@ module.exports = {
     {
       displayName: "unit",
       testMatch: ["<rootDir>/test/**/*.spec.ts"],
-      testPathIgnorePatterns: ["<rootDir>/test/integration/", "<rootDir>/test/e2e/"],
+      testPathIgnorePatterns: [
+        "<rootDir>/test/integration/",
+        "<rootDir>/test/e2e/",
+        "<rootDir>/test/examples/",
+      ],
       transform: { '^.+\\.(ts|tsx)$': 'ts-jest' },
       globalSetup: undefined,
       globalTeardown: undefined,
