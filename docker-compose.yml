@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+
+  app:
+    build: .
+    depends_on:
+      - db
+    environment:
+      MOCK_BASE_URL: http://host.docker.internal:3001
+    ports:
+      - "3000:3000" 
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: npm run test

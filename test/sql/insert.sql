@@ -1,0 +1,1 @@
+INSERT INTO users (login, password) VALUES ('sqluser', '42');
