@@ -2,7 +2,13 @@ import settings from "./settings";
 import { DatabaseServiceInstance } from "./factories/database.factory";
 import { HttpMockServiceInstance } from "./factories/http-mock.factory";
 import { LdapServiceInstance } from "./factories/ldap.factory";
-import { ServiceConfig, TestEnvironmentConfig } from "./types";
+import {
+  ServiceConfig,
+  TestEnvironmentConfig,
+  DatabaseConfig,
+  HttpMockConfig,
+  LdapConfig,
+} from "./types";
 
 type StartedService = {
   name: string;
@@ -31,6 +37,65 @@ export class LdapServer {
   constructor(
     public info: { host: string; port: number; baseDN: string; url: string },
   ) {}
+}
+
+export type DatabaseHandle = {
+  connectionInfo: {
+    host: string;
+    port: number | string;
+    user: string;
+    password: string;
+    database: string;
+  };
+  stop: () => Promise<void>;
+};
+
+export type HttpMockHandle = {
+  connectionInfo: { host: string; port: number; baseUrl: string };
+  stop: () => Promise<void>;
+};
+
+export type LdapHandle = {
+  connectionInfo: { host: string; port: number; baseDN: string; url: string };
+  stop: () => Promise<void>;
+};
+
+export async function createDb(config: DatabaseConfig): Promise<DatabaseHandle> {
+  const instance = new DatabaseServiceInstance("db", "database", config);
+  await instance.start();
+  const connectionInfo = instance.getConnectionInfo();
+  return {
+    connectionInfo,
+    stop: async () => {
+      await instance.stop();
+    },
+  };
+}
+
+export async function createMock(
+  config: HttpMockConfig,
+): Promise<HttpMockHandle> {
+  const instance = new HttpMockServiceInstance("mock", "http-mock", config);
+  await instance.start();
+  const connectionInfo = instance.getConnectionInfo();
+  return {
+    connectionInfo,
+    stop: async () => {
+      await instance.stop();
+    },
+  };
+}
+
+export async function createLdap(config: LdapConfig): Promise<LdapHandle> {
+  const instance = new LdapServiceInstance("ldap", "ldap", config);
+  await instance.start();
+  const connectionInfo = instance.getConnectionInfo();
+  return {
+    connectionInfo,
+    stop: async () => {
+      await instance.stop();
+    },
+  };
 }
 
 function resolveSettingsPath(path: string): any {

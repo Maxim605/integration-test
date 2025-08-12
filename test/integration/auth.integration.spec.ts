@@ -3,97 +3,75 @@ import { INestApplication, ValidationPipe } from "@nestjs/common";
 import request from "supertest";
 import { Pool } from "pg";
 import { createTestPool } from "../setup/db-pool";
-import { startServices, stopServices } from "../setup/services";
-import { TestEnvironmentConfig } from "../setup/types";
+import { createDb, createMock } from "../setup/services";
+import { DatabaseConfig, HttpMockConfig } from "../setup/types";
 
-const testConfig: TestEnvironmentConfig = {
-  services: [
+const dbConfig: DatabaseConfig = {
+  type: "postgres",
+  version: "15-alpine",
+  user: "postgres",
+  password: "admin",
+  database: "test_db",
+  tables: [
     {
-      name: "test-db",
-      type: "database",
-      config: {
-        type: "postgres",
-        version: "15-alpine",
-        user: "postgres",
-        password: "admin",
-        database: "test-db",
-        tables: [
-          {
-            name: "users",
-            columns: [
-              { name: "id", type: "SERIAL", primaryKey: true },
-              {
-                name: "login",
-                type: "VARCHAR(255)",
-                nullable: false,
-                unique: true,
-              },
-              { name: "password", type: "VARCHAR(255)", nullable: false },
-              {
-                name: "created_at",
-                type: "TIMESTAMP",
-                defaultValue: "CURRENT_TIMESTAMP",
-              },
-            ],
-            indexes: [{ name: "idx_login", columns: ["login"], unique: true }],
-          },
-        ],
-        data: {
-          users: [{ login: "122", password: "122" }],
+      name: "users",
+      columns: [
+        { name: "id", type: "SERIAL", primaryKey: true },
+        {
+          name: "login",
+          type: "VARCHAR(255)",
+          nullable: false,
+          unique: true,
+        },
+        { name: "password", type: "VARCHAR(255)", nullable: false },
+        {
+          name: "created_at",
+          type: "TIMESTAMP",
+          defaultValue: "CURRENT_TIMESTAMP",
+        },
+      ],
+      indexes: [{ name: "idx_login", columns: ["login"], unique: true }],
+    },
+  ],
+  data: {
+    users: [{ login: "122", password: "122" }],
+  },
+};
+
+const mockConfig: HttpMockConfig = {
+  port: 3001,
+  routes: [
+    {
+      method: "POST",
+      path: "/auth/login",
+      response: {
+        status: 200,
+        body: {
+          status: "ok",
         },
       },
     },
-    {
-      name: "mock-api",
-      type: "http-mock",
-      config: {
-        port: 3001,
-        routes: [
-          {
-            method: "POST",
-            path: "/auth/login",
-            response: {
-              status: 200,
-              body: {
-                status: "ok",
-              },
-            },
-          },
-        ],
-        middleware: [{ type: "cors" }, { type: "logging" }],
-      },
-    },
   ],
-  globalConfig: {
-    TEST_DB_HOST: "${test-db.host}",
-    TEST_DB_PORT: "${test-db.port}",
-    TEST_DB_USER: "${test-db.user}",
-    TEST_DB_PASSWORD: "${test-db.password}",
-    TEST_DB_NAME: "${test-db.database}",
-    TEST_API_URL: "http://localhost:3000",
-    MOCK_BASE_URL: "http://localhost:3001",
-    DATABASE_HOST: "${test-db.host}",
-    DATABASE_PORT: "${test-db.port}",
-    DATABASE_USER: "${test-db.user}",
-    DATABASE_PASSWORD: "${test-db.password}",
-    DATABASE_NAME: "${test-db.database}",
-  },
+  middleware: [{ type: "cors" }, { type: "logging" }],
 };
 
 describe("Интеграционные тесты аутентификации", () => {
   let app: INestApplication;
   let dbPool: Pool;
-  let services: Map<string, any>;
+  let dbHandle: { connectionInfo: any; stop: () => Promise<void> };
+  let mockHandle: { connectionInfo: any; stop: () => Promise<void> };
 
   beforeAll(async () => {
-    const started = await startServices(testConfig);
-    services = started.services;
-    const dbInfo = services.get("test-db").connectionInfo;
+    dbHandle = await createDb(dbConfig);
+    const dbInfo = dbHandle.connectionInfo;
     process.env.DATABASE_HOST = dbInfo.host;
     process.env.DATABASE_PORT = String(dbInfo.port);
     process.env.DATABASE_USER = dbInfo.user;
     process.env.DATABASE_PASSWORD = dbInfo.password;
     process.env.DATABASE_NAME = dbInfo.database;
+
+    mockHandle = await createMock(mockConfig);
+    process.env.MOCK_BASE_URL = mockHandle.connectionInfo.baseUrl;
 
     const { AppModule } = await import("../../src/app.module");
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -109,7 +87,8 @@ describe("Интеграционные тесты аутентификации",
   afterAll(async () => {
     await app.close();
     await dbPool.end();
-    if (services) await stopServices(services);
+    if (mockHandle) await mockHandle.stop();
+    if (dbHandle) await dbHandle.stop();
   });
 
   beforeEach(async () => {

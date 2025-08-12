@@ -3,12 +3,29 @@ import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { AppModule } from "../../src/app.module";
 import { Pool } from "pg";
 import { createTestPool } from "../setup/db-pool";
+import { createDb } from "../setup/services";
+import { DatabaseConfig } from "../setup/types";
 
 describe("Интеграционные тесты аутентификации", () => {
   let app: INestApplication;
   let dbPool: Pool;
+  let dbHandle: { connectionInfo: any; stop: () => Promise<void> } | null = null;
 
   beforeAll(async () => {
+    const cfg: DatabaseConfig = {
+      type: "postgres",
+      version: "15-alpine",
+      user: "postgres",
+      password: "admin",
+      database: "test-db",
+      initScripts: ["test/init-db.sql", "test/sql/insert.sql"],
+    };
+    dbHandle = await createDb(cfg);
+    process.env.DATABASE_HOST = dbHandle.connectionInfo.host;
+    process.env.DATABASE_PORT = String(dbHandle.connectionInfo.port);
+    process.env.DATABASE_USER = dbHandle.connectionInfo.user;
+    process.env.DATABASE_PASSWORD = dbHandle.connectionInfo.password;
+    process.env.DATABASE_NAME = dbHandle.connectionInfo.database;
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -29,6 +46,7 @@ describe("Интеграционные тесты аутентификации",
   afterAll(async () => {
     await app.close();
     await dbPool.end();
+    if (dbHandle) await dbHandle.stop();
   });
 
   describe("POST /login", () => {

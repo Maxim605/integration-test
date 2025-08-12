@@ -1,5 +1,5 @@
-import { TestEnvironmentConfig } from "./types";
-import { startServices } from "./services";
+import { DatabaseConfig } from "./types";
+import { createDb } from "./services";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -10,40 +10,21 @@ async function main() {
     case "start":
       try {
 
-        // default configuration
-        const config: TestEnvironmentConfig = {
-          services: [
-            {
-              name: "postgres",
-              type: "database",
-              config: {
-                type: "postgres",
-                version: "15-alpine",
-                user: "postgres",
-                password: "admin",
-                ...(process.env.EXTRA_SQL_FILES && {
-                  initScripts: [
-                    ...process.env.EXTRA_SQL_FILES.split(",")
-                      .map((f) => f.trim())
-                      .filter(Boolean),
-                  ],
-                }),
-              },
-            },
-          ],
-          globalConfig: {
-            DATABASE_HOST: "${postgres.host}",
-            DATABASE_PORT: "${postgres.port}",
-            DATABASE_USER: "${postgres.user}",
-            DATABASE_PASSWORD: "${postgres.password}",
-            DATABASE_NAME: "${postgres.database}",
-          },
-        };
-
-        const started = await startServices(config);
-        const svc = started.services.get("postgres");
-        if (!svc) throw new Error("postgres service not started");
-        const conn = svc.connectionInfo;
+        const cfg: DatabaseConfig = {
+          type: "postgres",
+          version: "15-alpine",
+          user: "postgres",
+          password: "admin",
+          ...(process.env.EXTRA_SQL_FILES && {
+            initScripts: [
+              ...process.env.EXTRA_SQL_FILES.split(",")
+                .map((f) => f.trim())
+                .filter(Boolean),
+            ],
+          }),
+        } as DatabaseConfig;
+        const db = await createDb(cfg);
+        const conn = db.connectionInfo;
         const outEnv = {
           DATABASE_HOST: String(conn.host),
           DATABASE_PORT: String(conn.port),

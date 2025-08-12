@@ -39,7 +39,7 @@ export class DatabaseServiceInstance implements ServiceInstance {
       port: String(port),
       user: String(this.config.user || "postgres"),
       password: String(this.config.password || "admin"),
-      database: String(this.config.database || "test-db"),
+      database: String(this.config.database),
     };
 
     await this.initializeDatabase();

@@ -1,37 +1,27 @@
 import { UserRepository } from "../../src/auth/user.repository";
 import { Pool } from "pg";
-import { startServices, stopServices } from "../setup/services";
-import { TestEnvironmentConfig } from "../setup/types";
+import { createDb } from "../setup/services";
+import { DatabaseConfig } from "../setup/types";
 
 describe("Тесты репозитория пользователей", () => {
   let repository: UserRepository;
   let pool: Pool;
 
   beforeAll(async () => {
-    const env: TestEnvironmentConfig = {
-      services: [
-        {
-          name: "postgres",
-          type: "database",
-          config: {
-            type: "postgres",
-            version: "15-alpine",
-            user: "postgres",
-            password: "admin",
-            database: "test-db",
-            initScripts: ["test/init-db.sql"],
-          },
-        },
-      ],
-      globalConfig: {
-        DATABASE_HOST: "${postgres.host}",
-        DATABASE_PORT: "${postgres.port}",
-        DATABASE_USER: "${postgres.user}",
-        DATABASE_PASSWORD: "${postgres.password}",
-        DATABASE_NAME: "${postgres.database}",
-      },
+    const cfg: DatabaseConfig = {
+      type: "postgres",
+      version: "15-alpine",
+      user: "postgres",
+      password: "admin",
+      database: "test-db",
+      initScripts: ["test/init-db.sql"],
     };
-    await startServices(env);
+    const db = await createDb(cfg);
+    process.env.DATABASE_HOST = db.connectionInfo.host;
+    process.env.DATABASE_PORT = String(db.connectionInfo.port);
+    process.env.DATABASE_USER = db.connectionInfo.user;
+    process.env.DATABASE_PASSWORD = db.connectionInfo.password;
+    process.env.DATABASE_NAME = db.connectionInfo.database;
     pool = new Pool({
       host: process.env.DATABASE_HOST,
       port: Number(process.env.DATABASE_PORT),
@@ -44,7 +34,6 @@ describe("Тесты репозитория пользователей", () => {
 
   afterAll(async () => {
     await pool.end();
-    await stopServices(new Map());
   });
 
   it("должен сохранять пользователя", async () => {

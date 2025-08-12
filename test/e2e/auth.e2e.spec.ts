@@ -4,43 +4,31 @@ import request from "supertest";
 import nock from "nock";
 import { Pool } from "pg";
 import { createTestPool } from "../setup/db-pool";
-import { startServices, stopServices } from "../setup/services";
-import { TestEnvironmentConfig } from "../setup/types";
+import { createDb } from "../setup/services";
+import { DatabaseConfig } from "../setup/types";
 
 describe("E2E тесты аутентификации с моками внешних сервисов", () => {
   let app: INestApplication;
   let dbPool: Pool | null;
-  let services: Map<string, any>;
   const baseUrl = process.env.MOCK_BASE_URL || "http://localhost:3001";
+  let dbHandle: { connectionInfo: any; stop: () => Promise<void> } | null = null;
 
   beforeAll(async () => {
-    const testEnv: TestEnvironmentConfig = {
-      services: [
-        {
-          name: "postgres",
-          type: "database",
-          config: {
-            type: "postgres",
-            version: "15-alpine",
-            user: "postgres",
-            password: "admin",
-            database: "test-db",
-            initScripts: ["test/init-db.sql"],
-          },
-        },
-      ],
-      globalConfig: {
-        DATABASE_HOST: "${postgres.host}",
-        DATABASE_PORT: "${postgres.port}",
-        DATABASE_USER: "${postgres.user}",
-        DATABASE_PASSWORD: "${postgres.password}",
-        DATABASE_NAME: "${postgres.database}",
-        MOCK_BASE_URL: "http://localhost:3001",
-      },
+    const dbConfig: DatabaseConfig = {
+      type: "postgres",
+      version: "15-alpine",
+      user: "postgres",
+      password: "admin",
+      database: "test-db",
+      initScripts: ["test/init-db.sql"],
     };
-
-    const started = await startServices(testEnv);
-    services = started.services;
+    dbHandle = await createDb(dbConfig);
+    process.env.DATABASE_HOST = dbHandle.connectionInfo.host;
+    process.env.DATABASE_PORT = String(dbHandle.connectionInfo.port);
+    process.env.DATABASE_USER = dbHandle.connectionInfo.user;
+    process.env.DATABASE_PASSWORD = dbHandle.connectionInfo.password;
+    process.env.DATABASE_NAME = dbHandle.connectionInfo.database;
+    process.env.MOCK_BASE_URL = "http://localhost:3001";
     const { AppModule } = await import("../../src/app.module");
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -68,7 +56,7 @@ describe("E2E тесты аутентификации с моками внешн
       dbPool = null;
     }
     nock.cleanAll();
-    if (services) await stopServices(services);
+    if (dbHandle) await dbHandle.stop();
   });
 
   beforeEach(async () => {

@@ -10,7 +10,7 @@ export interface TestEnvironmentConfig {
 }
 
 export interface DatabaseConfig {
-  type: "postgres" | "mysql" | "database";
+  type: string;
   version?: string;
   user?: string;
   password?: string;
